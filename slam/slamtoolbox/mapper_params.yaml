@@ -1,0 +1,23 @@
+slam_toolbox:
+  ros__parameters:
+    # 关键：对接 Fast-LIO 的里程计 Frame
+    odom_frame: camera_init
+    base_frame: base_link
+    map_frame: map
+    scan_topic: /scan
+    mode: mapping
+
+    # 求解器
+    solver_plugin: solver_plugins::CeresSolver
+    solver_type: sparse_jacobian
+    ideal_sampling_integration: true
+
+    # 时间与TF配置
+    transform_timeout: 0.5
+    tf_buffer_duration: 30.
+    stack_size_to_use: 40000000
+    use_sim_time: false
+    
+    # 建图质量控制
+    minimum_travel_distance: 0.1
+    minimum_travel_heading: 0.1

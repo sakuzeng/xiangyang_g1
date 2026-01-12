@@ -1,0 +1,43 @@
+# General
+.DS_Store
+Thumbs.db
+
+# IDE
+# .vscode/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# C/C++ / Build
+build/
+bin/
+lib/
+*.o
+*.so
+*.a
+*.exe
+compile_commands.json
+
+# Logs
+logs/
+*.log
+
+# Specific to xiangyang/slam
+# Ignore build artifacts in slam directory and subdirectories
+slam/**/build/
+slam/**/bin/
+slam/**/lib/
+
+# Specific to xiangyang/audio
+audio/logs/
+audio/asr/data/*.wav
+!audio/asr/data/example2.wav
+
+# Specific to xiangyang/loco
+loco/**/build/
+loco/**/install/

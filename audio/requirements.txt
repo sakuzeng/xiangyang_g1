@@ -1,0 +1,6 @@
+fastapi 
+uvicorn 
+netifaces 
+numpy
+jieba
+pypinyin

@@ -1,0 +1,8 @@
+digraph G {
+"camera_init" -> "body"[label=" Broadcaster: default_authority\nAverage rate: 20.185\nBuffer length: 5.45\nMost recent transform: 1764574437.84575\nOldest transform: 1764574432.396248\n"];
+"livox_frame" -> "livox_imu"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1764574437.9074132"[ shape=plaintext ] ;
+}->"livox_frame";
+}
