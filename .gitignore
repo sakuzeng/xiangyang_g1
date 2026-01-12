@@ -24,7 +24,7 @@ lib/
 compile_commands.json
 
 # Logs
-logs/
+*/logs/
 *.log
 
 # Specific to xiangyang/slam
