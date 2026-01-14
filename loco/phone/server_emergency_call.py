@@ -4,7 +4,7 @@ emergency_call_service.py
 =========================
 紧急呼叫服务（移除音频采集代码）
 """
-
+# TODO print转logger
 import sys
 import os
 import uuid

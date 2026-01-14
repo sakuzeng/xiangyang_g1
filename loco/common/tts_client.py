@@ -1,5 +1,10 @@
 import time
 import requests
+import logging
+from .logger import setup_logger
+
+# 配置日志
+logger = setup_logger("tts_client")
 
 # 配置
 TTS_SERVER_URL = "http://192.168.77.103:28001/speak_msg"
@@ -42,32 +47,61 @@ class TTSClient:
                         is_granted = data.get("is_granted", False)
                         
                         if is_granted:
-                            print(f"✅ [{allowed_source}] 成功获得TTS独占权 (第{attempt}次尝试)")
+                            logger.info(f"✅ [{allowed_source}] 成功获得TTS独占权 (第{attempt}次尝试)")
                             return True
                         else:
                             current_source = data.get("current_source")
-                            print(f"⚠️ [{allowed_source}] 等待独占权... (当前持有者: {current_source})")
+                            logger.warning(f"⚠️ [{allowed_source}] 等待独占权... (当前持有者: {current_source})")
                             time.sleep(0.3)
                     else:
-                        print(f"⚠️ 设置TTS独占模式请求失败: HTTP {response.status_code}")
+                        logger.warning(f"⚠️ 设置TTS独占模式请求失败: HTTP {response.status_code}")
                         return False
                 
-                print(f"❌ [{allowed_source}] 获取独占权超时 ({max_wait_seconds}秒)")
+                logger.error(f"❌ [{allowed_source}] 获取独占权超时 ({max_wait_seconds}秒)")
                 return False
             else:
                 response = requests.post(TTS_CONTROL_URL, json=payload, timeout=2.0)
                 if response.status_code == 200:
                     data = response.json()
                     if data.get("is_granted", False):
-                        print(f"🔓 [{allowed_source}] TTS独占模式已释放")
+                        logger.info(f"🔓 [{allowed_source}] TTS独占模式已释放")
                         return True
                     else:
-                        print(f"⚠️ [{allowed_source}] 释放独占模式失败: {data.get('message', '未知错误')}")
+                        logger.warning(f"⚠️ [{allowed_source}] 释放独占模式失败: {data.get('message', '未知错误')}")
                         return False
                 return False
                 
         except Exception as e:
-            print(f"⚠️ 设置TTS独占模式异常: {e}")
+            logger.error(f"⚠️ 设置TTS独占模式异常: {e}")
+            return False
+            
+    @staticmethod
+    def stop_current_playback(source=None):
+        """停止当前播放 (保留队列)
+        Args:
+            source: 请求停止的来源，用于独占模式校验。如果不传，默认为 DEFAULT_SOURCE
+        """
+        if source is None:
+            source = TTSClient.DEFAULT_SOURCE
+
+        try:
+            # 假设 TTS_CONTROL_URL 是 .../control/exclusive_mode
+            base_url = TTS_CONTROL_URL.rsplit("/", 1)[0]
+            url = f"{base_url}/stop_current_playback"
+            
+            payload = {
+                "allowed_source": source
+            }
+
+            response = requests.post(url, json=payload, timeout=2.0)
+            if response.status_code == 200:
+                logger.info(f"🛑 [{source}] 已发送停止当前播放请求")
+                return True
+            else:
+                logger.warning(f"⚠️ 停止当前播放失败: {response.status_code}")
+                return False
+        except Exception as e:
+            logger.error(f"❌ 停止当前播放请求异常: {e}")
             return False
 
     @staticmethod
@@ -87,12 +121,12 @@ class TTSClient:
             }
             headers = {"Content-Type": "application/json"}
             
-            print(f"🔊 {text}")
+            logger.info(f"🔊 {text}")
             # 增加超时时间，防止长文本请求超时
             response = requests.post(TTS_SERVER_URL, json=payload, headers=headers, timeout=10.0)
             
             if response.status_code != 200:
-                print(f"⚠️ TTS错误: {response.status_code}")
+                logger.warning(f"⚠️ TTS错误: {response.status_code}")
                 return None
             
             result = response.json()
@@ -108,7 +142,7 @@ class TTSClient:
             return task_id
                 
         except Exception as e:
-            print(f"❌ TTS失败: {e}")
+            logger.error(f"❌ TTS失败: {e}")
             return None
 
     @staticmethod
@@ -140,7 +174,7 @@ class TTSClient:
     def _wait_for_completion(task_id, timeout=120):
         """等待任务完成 (基于任务不在活动与队列中)"""
         start_time = time.time()
-        check_interval = 0.2
+        check_interval = 0.05 # ⚡ 优化: 缩短轮询间隔，提高响应速度 (原0.2s)
         task_seen = False
         stable_checks = 0
         REQUIRED_STABLE_CHECKS = 5  # 增加到 5 次 (1秒)，防止任务在网关转发间隙“闪烁”导致误判

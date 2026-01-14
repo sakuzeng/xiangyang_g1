@@ -5,6 +5,7 @@ G1迎宾演示 V3 (重构版)
 - 协调 GreetingSkill 和 AdvancedLocomotionController
 - 执行业务流程
 """
+# TODO print转logger
 import sys
 import os
 import time

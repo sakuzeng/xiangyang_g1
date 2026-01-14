@@ -7,7 +7,7 @@ from .advanced_locomotion import AdvancedLocomotionController
 from .asr_client import ASRClient
 from .interaction_client import InteractionClient, WakeControl
 from .tts_client import TTSClient
-
+from .logger import setup_logger
 __all__ = [
     'robot_state', 
     'RobotStateManager',
@@ -15,5 +15,6 @@ __all__ = [
     'ASRClient',
     'InteractionClient',
     'WakeControl',
-    'TTSClient'
+    'TTSClient',
+    'setup_logger'
 ]
