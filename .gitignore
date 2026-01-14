@@ -1,17 +1,10 @@
-# General
-.DS_Store
-Thumbs.db
-
-# IDE
-# .vscode/
-*.swp
-
 # Python
 __pycache__/
 *.pyc
 *.pyo
 venv/
 .env
+.swp
 
 # C/C++ / Build
 build/
@@ -24,9 +17,8 @@ lib/
 compile_commands.json
 
 # Logs
-*/logs/
-*.log
-
+**/logs/
+**/log/
 # Specific to xiangyang/slam
 # Ignore build artifacts in slam directory and subdirectories
 slam/**/build/
