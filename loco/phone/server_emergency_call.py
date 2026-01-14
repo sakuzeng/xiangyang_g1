@@ -4,7 +4,7 @@ emergency_call_service.py
 =========================
 紧急呼叫服务（移除音频采集代码）
 """
-# TODO print转logger
+# TEST print转logger
 import sys
 import os
 import uuid
@@ -24,6 +24,7 @@ from pydantic import BaseModel
 # if current_dir not in sys.path:
 #     sys.path.append(current_dir)
 from pathlib import Path
+
 # 🆕 添加项目根目录到路径 (为了导入 xiangyang 包)
 # project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
 project_root = str(Path(__file__).resolve().parents[3])
@@ -34,10 +35,13 @@ if project_root not in sys.path:
 try:
     from xiangyang.loco.common.tts_client import TTSClient  # 🆕 使用公共模块
     from xiangyang.loco.common.asr_client import ASRClient
+    from xiangyang.loco.common.logger import setup_logger
     from phone_touch_interface import touch_target, TouchSystemError, shutdown
 except ImportError as e:
-    print(f"❌ 导入模块失败: {e}")
+    logger.error(f"❌ 导入模块失败: {e}")
     sys.exit(1)
+
+logger = setup_logger("server_emergency_call")
 
 # 全局任务队列
 task_queue = queue.Queue()
@@ -63,7 +67,7 @@ def parse_exception_causes(exc: Exception) -> List[str]:
 
 def worker():
     """后台工作线程：串行处理任务"""
-    print("👷 任务处理线程已启动，等待任务...")
+    logger.info("👷 任务处理线程已启动，等待任务...")
 
     while True:
         try:
@@ -72,7 +76,7 @@ def worker():
                 break
             
             task_id, speak_msg, target_index = item
-            print(f"🔄 开始处理任务 [{task_id}]: 内容='{speak_msg}', 目标={target_index}")
+            logger.info(f"🔄 开始处理任务 [{task_id}]: 内容='{speak_msg}', 目标={target_index}")
             
             if task_id in tasks_store:
                 tasks_store[task_id]["status"] = "processing"
@@ -90,7 +94,7 @@ def worker():
                 error_msg = str(e)
                 causes = parse_exception_causes(e)
                 
-                print(f"❌ 任务 [{task_id}] 失败: {error_type} - {error_msg}")
+                logger.error(f"❌ 任务 [{task_id}] 失败: {error_type} - {error_msg}")
                 
                 if task_id in tasks_store:
                     tasks_store[task_id].update({
@@ -104,19 +108,19 @@ def worker():
                 TTSClient.speak("操作执行失败，请检查设备", wait=True)
             
             task_queue.task_done()
-            print(f"🏁 任务结束，队列剩余任务数: {task_queue.qsize()}")
+            logger.info(f"🏁 任务结束，队列剩余任务数: {task_queue.qsize()}")
             
         except Exception as e:
-            print(f"❌ Worker 线程异常: {e}")
+            logger.error(f"❌ Worker 线程异常: {e}")
 
 def execute_emergency_task(speak_msg: str, target_index: int):
     """后台执行任务逻辑"""
-    print(f"\n📨 收到请求: 目标={target_index}, 内容='{speak_msg}'")
+    logger.info(f"\n📨 收到请求: 目标={target_index}, 内容='{speak_msg}'")
     
     # 1. 获取独占模式
     if not TTSClient.set_exclusive_mode(True, allowed_source="emergency_call", max_wait_seconds=3):
         error_msg = "无法获取TTS独占权 (超时或服务异常)"
-        print(f"❌ {error_msg}")
+        logger.error(f"❌ {error_msg}")
         TTSClient.speak("系统繁忙，请稍后再试", wait=True)
         raise TouchSystemError(error_msg)
     
@@ -131,14 +135,14 @@ def execute_emergency_task(speak_msg: str, target_index: int):
         TTSClient.speak(prompt_msg, wait=True)
         
         # 🆕 调用 ASR 服务录音识别（VAD 模式，自动检测）
-        print("🤔 录音4s")
+        logger.info("🤔 录音4s")
         text = ASRClient.recognize_live(
             wait_time=4.0
         )
-        print(f"📝 识别结果: [{text}]")
+        logger.info(f"📝 识别结果: [{text}]")
         
         if not text:
-            print("⚠️ 未检测到语音或识别失败")
+            logger.warning("⚠️ 未检测到语音或识别失败")
             TTSClient.speak("未检测到语音,操作取消", wait=True)
             raise TouchSystemError("语音交互超时或未检测到语音")
         
@@ -147,12 +151,12 @@ def execute_emergency_task(speak_msg: str, target_index: int):
         confirmed = any(k in text for k in keywords)
         
         if confirmed:
-            print("✅ 用户确认拨打电话")
+            logger.info("✅ 用户确认拨打电话")
             TTSClient.speak("正在为您拨通，请稍候", wait=False)
             touch_target(target_index, auto_confirm=True, speak_msg=speak_msg)
-            print(f"✅ 任务执行完成: {speak_msg}")
+            logger.info(f"✅ 任务执行完成: {speak_msg}")
         else:
-            print("❌ 用户未确认或意图不明")
+            logger.warning("❌ 用户未确认或意图不明")
             TTSClient.speak("好的，已取消操作", wait=True)
         
     except Exception as e:
@@ -160,7 +164,7 @@ def execute_emergency_task(speak_msg: str, target_index: int):
     finally:
         TTSClient.DEFAULT_SOURCE = original_source
         TTSClient.set_exclusive_mode(False, allowed_source="emergency_call")
-        print("🔧 释放机械臂控制权...")
+        logger.info("🔧 释放机械臂控制权...")
         shutdown()
 
 # ================= FastAPI 应用 =================
@@ -228,7 +232,7 @@ async def trigger_emergency_call(request: CallRequest):
     task_queue.put((task_id, request.speak_msg, request.target_index))
     
     logger_msg = f"任务 [{task_id}] 已加入队列，前方排队数: {position}"
-    print(f"📥 {logger_msg}")
+    logger.info(f"📥 {logger_msg}")
     
     return {
         "task_id": task_id,
@@ -242,6 +246,6 @@ def health_check():
     return {"status": "ok", "service": "emergency_call_service"}
 
 if __name__ == "__main__":
-    print("🚀 启动紧急呼叫服务...")
-    print("📡 监听地址: http://0.0.0.0:9000")
+    logger.info("🚀 启动紧急呼叫服务...")
+    logger.info("📡 监听地址: http://0.0.0.0:9000")
     uvicorn.run(app, host="0.0.0.0", port=9000)
