@@ -9,8 +9,8 @@ logger = setup_logger("tts_client")
 # 配置
 TTS_SERVER_URL = "http://192.168.77.103:28001/speak_msg"
 TTS_MONITOR_URL = "http://192.168.77.103:28001/monitor"
-TTS_CONTROL_URL = "http://192.168.77.103:28001/control/exclusive_mode"
-
+TTS_EXCLUSIVE_MODE_URL = "http://192.168.77.103:28001/control/exclusive_mode"
+TTS_STOP_CURRENT_PLAY_URL = "http://192.168.77.103:28001/control/stop_current_play"
 class TTSClient:
     """HTTP TTS 客户端"""
     DEFAULT_SOURCE = "emergency_call"
@@ -40,7 +40,7 @@ class TTSClient:
                 
                 while time.time() - start_time < max_wait_seconds:
                     attempt += 1
-                    response = requests.post(TTS_CONTROL_URL, json=payload, timeout=2.0)
+                    response = requests.post(TTS_EXCLUSIVE_MODE_URL, json=payload, timeout=2.0)
                     
                     if response.status_code == 200:
                         data = response.json()
@@ -85,15 +85,11 @@ class TTSClient:
             source = TTSClient.DEFAULT_SOURCE
 
         try:
-            # 假设 TTS_CONTROL_URL 是 .../control/exclusive_mode
-            base_url = TTS_CONTROL_URL.rsplit("/", 1)[0]
-            url = f"{base_url}/stop_current_playback"
-            
             payload = {
                 "allowed_source": source
             }
 
-            response = requests.post(url, json=payload, timeout=2.0)
+            response = requests.post(TTS_STOP_CURRENT_PLAY_URL, json=payload, timeout=2.0)
             if response.status_code == 200:
                 logger.info(f"🛑 [{source}] 已发送停止当前播放请求")
                 return True
