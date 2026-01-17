@@ -33,3 +33,5 @@ audio/asr/data/*.wav
 # Specific to xiangyang/loco
 loco/**/build/
 loco/**/install/
+
+**/*.json

@@ -1,8 +1,13 @@
 # TEST 修改获取最新的识别结果修改目前有问题
 import requests
+import logging
+from .logger import setup_logger
 
 # 配置
 ASR_SERVER_URL = "http://192.168.77.103:28003/recognize_live"
+
+# 配置日志
+logger = setup_logger("asr_client")
 
 class ASRClient:
     """HTTP ASR 客户端（支持固定时长和 VAD 模式）"""
@@ -39,21 +44,21 @@ class ASRClient:
                 result = response.json()
                 if result.get("success"):
                     method = result.get("method", "unknown")
-                    print(f"ℹ️ 识别模式: {method}")
+                    logger.info(f"ℹ️ 识别模式: {method}")
                     return result.get("text", "")
                 else:
-                    print(f"⚠️ ASR 识别失败: {result.get('error')}")
+                    logger.warning(f"⚠️ ASR 识别失败: {result.get('error')}")
                     return ""
             else:
-                print(f"⚠️ ASR 服务请求失败: HTTP {response.status_code}")
+                logger.warning(f"⚠️ ASR 服务请求失败: HTTP {response.status_code}")
                 return ""
                 
         except requests.exceptions.Timeout:
-            print("❌ ASR 服务超时")
+            logger.error("❌ ASR 服务超时")
             return ""
         except requests.exceptions.ConnectionError:
-            print("❌ 无法连接到 ASR 服务，请确保服务已启动")
+            logger.error("❌ 无法连接到 ASR 服务，请确保服务已启动")
             return ""
         except Exception as e:
-            print(f"❌ ASR 调用异常: {e}")
+            logger.error(f"❌ ASR 调用异常: {e}")
             return ""

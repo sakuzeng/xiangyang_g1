@@ -1,8 +1,13 @@
 import requests
 import time
+import logging
+from .logger import setup_logger
 
 # 配置
 INTERACTION_API = "http://192.168.77.103:28004"
+
+# 配置日志
+logger = setup_logger("interaction_client")
 
 class InteractionClient:
     """Interaction 服务客户端（管理唤醒检测）"""
@@ -28,14 +33,14 @@ class InteractionClient:
                 data = response.json()
                 success = data.get("success", False)
                 if success:
-                    print(f"⏸️  已暂停唤醒检测 (来源: {source})")
+                    logger.info(f"⏸️  已暂停唤醒检测 (来源: {source})")
                 return success
         except requests.exceptions.ConnectionError:
-            print("⚠️ 无法连接到 interaction 服务")
+            logger.warning("⚠️ 无法连接到 interaction 服务")
         except requests.exceptions.Timeout:
-            print("⚠️ interaction 服务请求超时")
+            logger.warning("⚠️ interaction 服务请求超时")
         except Exception as e:
-            print(f"⚠️ 暂停唤醒检测异常: {e}")
+            logger.error(f"⚠️ 暂停唤醒检测异常: {e}")
         return False
     
     @staticmethod
@@ -59,14 +64,14 @@ class InteractionClient:
                 data = response.json()
                 success = data.get("success", False)
                 if success:
-                    print(f"▶️  已恢复唤醒检测 (来源: {source})")
+                    logger.info(f"▶️  已恢复唤醒检测 (来源: {source})")
                 return success
         except requests.exceptions.ConnectionError:
-            print("⚠️ 无法连接到 interaction 服务")
+            logger.warning("⚠️ 无法连接到 interaction 服务")
         except requests.exceptions.Timeout:
-            print("⚠️ interaction 服务请求超时")
+            logger.warning("⚠️ interaction 服务请求超时")
         except Exception as e:
-            print(f"⚠️ 恢复唤醒检测异常: {e}")
+            logger.error(f"⚠️ 恢复唤醒检测异常: {e}")
         return False
     
     @staticmethod

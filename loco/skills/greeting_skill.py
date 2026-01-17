@@ -5,6 +5,9 @@ import json
 import time
 import traceback
 from pathlib import Path
+from xiangyang.loco.common.logger import setup_logger
+
+logger = setup_logger("greeting_skill")
 # 添加项目根目录到 sys.path 以支持绝对导入
 project_root = str(Path(__file__).resolve().parents[3])
 if project_root not in sys.path:
@@ -53,14 +56,14 @@ class GreetingSkill:
             arm_path = base_dir / f"loco/arm_control/saved_poses/{self.arm_side}_arm_poses.json"
             hand_path = base_dir / f"loco/dex3_control/saved_poses/{self.hand_side}_hand_poses.json"
             
-            print(f"📂 加载姿态: {arm_path.name}")
+            logger.info(f"📂 加载姿态: {arm_path.name}")
             with open(arm_path, 'r') as f:
                 self.arm_poses = json.load(f)
             with open(hand_path, 'r') as f:
                 self.hand_poses = json.load(f)
             return True
         except Exception as e:
-            print(f"❌ 加载姿态文件失败: {e}")
+            logger.error(f"❌ 加载姿态文件失败: {e}")
             return False
 
     def initialize(self):
@@ -69,7 +72,7 @@ class GreetingSkill:
         try:
             if not self._load_pose_files(): return False
             
-            print("🔧 初始化手臂和灵巧手...")
+            logger.info("🔧 初始化手臂和灵巧手...")
             self.arm_client = robot_state.get_or_create_arm_client(self.interface)
             self.hand_client = robot_state.get_or_create_hand_client(self.hand_side, self.interface)
             
@@ -82,14 +85,14 @@ class GreetingSkill:
             self.is_initialized = True
             return True
         except Exception as e:
-            print(f"❌ 技能初始化失败: {e}")
+            logger.error(f"❌ 技能初始化失败: {e}")
             return False
 
     def perform(self, voice_text, tts_source="greeting"):
         """执行打招呼并播报"""
         if not self.initialize(): return False
         
-        print(f"👋 执行打招呼技能... 语音: {voice_text}")
+        logger.info(f"👋 执行打招呼技能... 语音: {voice_text}")
         try:
             with robot_state.safe_arm_control(arm=self.arm_side, source="greeting_act", timeout=60):
                 with robot_state.safe_hand_control(hand=self.hand_side, source="greeting_act", timeout=60):
@@ -115,10 +118,10 @@ class GreetingSkill:
                             TTSClient.speak(voice_text, volume=50, wait=False, source=tts_source)
                         
                         time.sleep(0.3)
-            print("✅ 打招呼完成")
+            logger.info("✅ 打招呼完成")
             return True
         except Exception as e:
-            print(f"❌ 技能执行失败: {e}")
+            logger.error(f"❌ 技能执行失败: {e}")
             traceback.print_exc()
             return False
         finally:
@@ -126,7 +129,7 @@ class GreetingSkill:
 
     def stop(self):
         """释放控制权"""
-        print("🔓 释放手臂/手控制")
+        logger.info("🔓 释放手臂/手控制")
         if self.arm_client:
             self.arm_client.stop_control()
             robot_state.reset_arm_state(self.arm_side)

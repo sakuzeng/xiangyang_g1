@@ -1,8 +1,13 @@
 import time
 import math
 import traceback
+import logging
+from .logger import setup_logger
 from unitree_sdk2py.g1.loco.g1_loco_client import LocoClient
 from unitree_sdk2py.dds.odometry_client import OdometryClient
+
+# 配置日志
+logger = setup_logger("advanced_locomotion")
 
 class AdvancedLocomotionController:
     """
@@ -23,14 +28,14 @@ class AdvancedLocomotionController:
     def initialize(self):
         """初始化底盘和里程计"""
         try:
-            print("📡 初始化里程计...")
+            logger.info("📡 初始化里程计...")
             self.odom_client = OdometryClient(
                 interface=self.interface,
                 use_high_freq=False,
                 use_low_freq=True
             )
             if not self.odom_client.initialize():
-                print("❌ 里程计初始化失败")
+                logger.error("❌ 里程计初始化失败")
                 return False
             
             # 等待数据稳定
@@ -39,15 +44,15 @@ class AdvancedLocomotionController:
             self.loco_client = LocoClient()
             self.loco_client.Init()
             
-            print("✅ 底盘运控初始化完成")
+            logger.info("✅ 底盘运控初始化完成")
             return True
         except Exception as e:
-            print(f"❌ 底盘初始化异常: {e}")
+            logger.error(f"❌ 底盘初始化异常: {e}")
             return False
 
     def move_forward_precise(self, distance: float):
         """基于里程计的精确前进/后退"""
-        print(f"🚶 精确移动 {distance:.2f}m")
+        logger.info(f"🚶 精确移动 {distance:.2f}m")
         
         start_pos = self.odom_client.get_current_position()
         start_x, start_y = start_pos[0], start_pos[1]
@@ -84,10 +89,10 @@ class AdvancedLocomotionController:
             # 打印结果
             final_pos = self.odom_client.get_current_position()
             actual_dist = math.sqrt((final_pos[0] - start_x)**2 + (final_pos[1] - start_y)**2)
-            print(f"✅ 移动完成: 目标={target_distance:.2f}m, 实际={actual_dist:.2f}m")
+            logger.info(f"✅ 移动完成: 目标={target_distance:.2f}m, 实际={actual_dist:.2f}m")
             
         except Exception as e:
-            print(f"❌ 移动异常: {e}")
+            logger.error(f"❌ 移动异常: {e}")
         finally:
             self.stop()
 
@@ -109,7 +114,7 @@ class AdvancedLocomotionController:
         target_delta = sign * target_angle_rad
         
         start_yaw = self.odom_client.get_current_yaw()
-        print(f"🔄 {'左转' if is_left else '右转'} {abs(angle_deg):.1f}°")
+        logger.info(f"🔄 {'左转' if is_left else '右转'} {abs(angle_deg):.1f}°")
         
         max_time = target_angle_rad / self.angular_velocity + 10
         start_time = time.time()
@@ -131,7 +136,7 @@ class AdvancedLocomotionController:
                 
                 # 过转保护
                 if abs(current_diff) > target_angle_rad * 1.2:
-                    print("⚠️ 检测到过转，强制停止")
+                    logger.warning("⚠️ 检测到过转，强制停止")
                     break
                 
                 # 自适应角速度
@@ -151,10 +156,10 @@ class AdvancedLocomotionController:
             time.sleep(0.5) # 等待完全静止更新里程计
             final_yaw = self.odom_client.get_current_yaw()
             actual_change = math.degrees(math.atan2(math.sin(final_yaw - start_yaw), math.cos(final_yaw - start_yaw)))
-            print(f"✅ 旋转完成: 实际变化 {actual_change:.1f}°")
+            logger.info(f"✅ 旋转完成: 实际变化 {actual_change:.1f}°")
             
         except Exception as e:
-            print(f"❌ 旋转异常: {e}")
+            logger.error(f"❌ 旋转异常: {e}")
         finally:
             self.stop()
 
