@@ -16,9 +16,9 @@ from typing import List, Tuple, Optional, Dict, Union
 
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
+from pathlib import Path
 # 添加项目根目录到路径 (为了导入 xiangyang 包)
-current_dir = os.path.dirname(__file__)
-project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
+project_root = str(Path(__file__).resolve().parents[3])
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 

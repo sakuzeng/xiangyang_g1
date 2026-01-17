@@ -5,14 +5,14 @@ import json
 import time
 import traceback
 from pathlib import Path
-from xiangyang.loco.common.logger import setup_logger
 
-logger = setup_logger("greeting_skill")
 # 添加项目根目录到 sys.path 以支持绝对导入
 project_root = str(Path(__file__).resolve().parents[3])
 if project_root not in sys.path:
     sys.path.insert(0, project_root)  # 使用 insert(0) 确保优先加载本地项目代码
-
+    
+from xiangyang.loco.common.logger import setup_logger
+logger = setup_logger("greeting_skill")
 from xiangyang.loco.common import TTSClient
 from xiangyang.loco.common import robot_state
 

@@ -11,22 +11,17 @@ import sys
 import os
 from typing import Optional, Tuple
 
-from pathlib import Path
-project_root = str(Path(__file__).resolve().parents[3])
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# 添加路径以确保能导入依赖
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 from unitree_sdk2py.g1.loco.g1_loco_client import LocoClient
 
-from xiangyang.loco.common.logger import setup_logger
-
-from xiangyang.loco.phone.phone_touch_task import PhoneTouchController, get_mode
-from xiangyang.loco.phone.touch_exceptions import *
+from phone_touch_task import PhoneTouchController, get_mode
+from touch_exceptions import *
 
 # 全局控制器实例（复用连接）
 _GLOBAL_CONTROLLER: Optional[PhoneTouchController] = None
-logger = setup_logger("phone_touch_interface")
 
 def _get_system_params(interface: str = "eth0") -> dict:
     """自动检测系统状态并返回对应的参数配置"""
@@ -43,14 +38,14 @@ def _get_system_params(interface: str = "eth0") -> dict:
         # 释放SDK连接，避免与Controller冲突
         # sport_client.Close() # SDK没有显式Close，依赖GC或不冲突
         
-        logger.info(f"🔍 接口层检测状态: ID={cur_id}, Mode={cur_mode}")
+        print(f"🔍 接口层检测状态: ID={cur_id}, Mode={cur_mode}")
         
         # 走跑模式
         if cur_id == 801 and cur_mode is not None and cur_mode != 2:
             return {
-                "expected_torso_z": -0.165,
-                "measurement_error": [0.005, -0.055, 0.25],
-                "wrist_pitch": -0.65,
+                "expected_torso_z": -0.17,
+                "measurement_error": [0.005, -0.05, 0.25],
+                "wrist_pitch": -0.70,
                 "torso_x_range": (0.25, 0.39),
                 "torso_y_range": (0.14, 0.38)
             }
@@ -65,7 +60,7 @@ def _get_system_params(interface: str = "eth0") -> dict:
             }
             
     except Exception as e:
-        logger.warning(f"⚠️ 状态检测失败，使用默认(常规)参数: {e}")
+        print(f"⚠️ 状态检测失败，使用默认(常规)参数: {e}")
         return {
             "expected_torso_z": -0.15,
             "measurement_error": [-0.01, -0.08, 0.24],
@@ -118,7 +113,7 @@ def touch_target(target_index: int, interface: str = "eth0", auto_confirm: bool 
         
     except Exception as e:
         # 确保异常被传播，可以在这里添加统一的日志记录
-        logger.error(f"🚨 接口层捕获异常: {e}")
+        print(f"🚨 接口层捕获异常: {e}")
         raise
 
 def shutdown():
@@ -137,7 +132,7 @@ if __name__ == "__main__":
     
     try:
         touch_target(args.target)
-        logger.info("✅ 接口调用成功")
+        print("✅ 接口调用成功")
     except Exception as e:
-        logger.error(f"❌ 接口调用失败: {type(e).__name__}: {e}")
+        print(f"❌ 接口调用失败: {type(e).__name__}: {e}")
         sys.exit(1)

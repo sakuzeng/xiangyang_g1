@@ -22,12 +22,15 @@ except ModuleNotFoundError as exc:
         "需要 'pynput' 依赖包。\n"
         "请使用以下命令安装: pip install pynput"
     ) from exc
+from pathlib import Path
 
-from hanger_boot_sequence_run import hanger_boot_sequence
+# 添加项目根目录到路径 (为了导入 xiangyang 包)
+project_root = str(Path(__file__).resolve().parents[3])
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# 导入状态管理器
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.robot_state_manager import robot_state
+from xiangyang.loco.motion_control.hanger_boot_sequence_run import hanger_boot_sequence
+from xiangyang.loco.common.robot_state_manager import robot_state
 
 # --- 🆕 优化的参数 ---
 MAX_LINEAR_VEL = 0.3      # m/s: 最大线速度

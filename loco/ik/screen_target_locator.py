@@ -14,6 +14,7 @@ screen_target_locator.py
 单一检测命令行示例:
 python screen_target_locator.py --mode single --target 17
 """
+
 import sys
 import os
 import cv2
@@ -22,23 +23,19 @@ import requests
 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 from typing import Optional, Tuple, Dict, Any
-
 from pathlib import Path
-project_root = str(Path(__file__).resolve().parents[3])
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
-from xiangyang.loco.phone.touch_exceptions import (
+# 🆕 导入自定义异常
+from touch_exceptions import (
     YoloServiceError, 
     TargetNotFoundError, 
     DepthAcquisitionError,
     CameraError
 )
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'loco', 'unitree_sdk_python'))
 from unitree_sdk2py.camera.realsense_camera_client import RealSenseCamera
-from xiangyang.loco.common.logger import setup_logger
 
-logger = setup_logger("screen_target_locator")
 
 
 # ==========================================
@@ -260,23 +257,23 @@ class DepthHelper:
                     'torso_z_deviation': abs(pt_torso[2] - self.expected_torso_z)
                 }
             else:
-                logger.warning(f"  ⚠️  常规深度异常 (Torso Z={pt_torso[2]:.3f}m),扩大搜索...")
+                print(f"  ⚠️  常规深度异常 (Torso Z={pt_torso[2]:.3f}m),扩大搜索...")
         
         # ========== 阶段2: 中值填补 ==========
-        logger.info(f"  → 收集周围正常深度点 (半径≤{max_radius}px)...")
+        print(f"  → 收集周围正常深度点 (半径≤{max_radius}px)...")
         valid_candidates = self.collect_valid_depth_candidates(
             depth_image, x, y, max_radius=max_radius
         )
         
         if len(valid_candidates) < 3:
-            logger.error(f"  ❌ 正常深度点不足 ({len(valid_candidates)} < 3)")
+            print(f"  ❌ 正常深度点不足 ({len(valid_candidates)} < 3)")
             return None
         
         # 取中值深度
         depths = [c[0] for c in valid_candidates]
         median_depth = np.median(depths)
         
-        logger.info(f"  ✅ 找到 {len(valid_candidates)} 个正常点,中值深度: {median_depth:.3f}m")
+        print(f"  ✅ 找到 {len(valid_candidates)} 个正常点,中值深度: {median_depth:.3f}m")
         
         # 使用目标点像素 + 中值深度
         pt_cam = rs.rs2_deproject_pixel_to_point(
@@ -329,12 +326,12 @@ class ScreenTargetLocator:
         self.last_detection_result = None
         self.last_torso_coords = None
         
-        logger.info(f"✅ 屏幕目标定位器初始化完成")
-        logger.info(f"   YOLO服务: {yolo_server_url}")
-        logger.info(f"   摄像头分辨率: 848x480")
-        logger.info(f"   🆕 Torso Z基准: {expected_torso_z:.3f}m (±{torso_z_tolerance*100:.0f}cm)")
+        print(f"✅ 屏幕目标定位器初始化完成")
+        print(f"   YOLO服务: {yolo_server_url}")
+        print(f"   摄像头分辨率: 848x480")
+        print(f"   🆕 Torso Z基准: {expected_torso_z:.3f}m (±{torso_z_tolerance*100:.0f}cm)")
         if self.measurement_error is not None:
-            logger.info(f"   🆕 显示修正误差: {self.measurement_error}")
+            print(f"   🆕 显示修正误差: {self.measurement_error}")
     
     def _init_depth_helper(self):
         """初始化深度辅助工具 (需要相机已启动)"""
@@ -364,14 +361,14 @@ class ScreenTargetLocator:
         yolo_result = self.yolo_client.detect_screen_target(color_image, target_index)
         
         if not yolo_result or not yolo_result.get('found'):
-            logger.error(f"❌ [Locator] 未检测到屏幕或目标区域 {target_index}")
+            print(f"❌ [Locator] 未检测到屏幕或目标区域 {target_index}")
             raise TargetNotFoundError(f"未检测到屏幕或目标区域 {target_index}")
         
         # 2. 提取目标中心点
         target_center = yolo_result['target_region']['center']
         pixel_x, pixel_y = target_center
         
-        logger.info(f"\n📍 目标区域 {target_index} 中心: ({pixel_x}, {pixel_y})")
+        print(f"\n📍 目标区域 {target_index} 中心: ({pixel_x}, {pixel_y})")
         
         # 3. 🆕 使用升级版深度获取
         depth_result = self.depth_helper.get_depth_with_validation(
@@ -380,7 +377,7 @@ class ScreenTargetLocator:
         )
         
         if depth_result is None:
-            logger.error(f"❌ [Locator] 深度获取失败 (深度图缺失或点云无效)")
+            print(f"❌ [Locator] 深度获取失败 (深度图缺失或点云无效)")
             raise DepthAcquisitionError("无法获取有效深度值 (深度图缺失或点云无效)")
         
         # 4. 提取结果
@@ -389,10 +386,10 @@ class ScreenTargetLocator:
         torso_point = depth_result['torso_coord']
         method = depth_result['method']
         
-        logger.info(f"📏 深度: {depth_meters:.3f}m (方法: {method})")
+        print(f"📏 深度: {depth_meters:.3f}m (方法: {method})")
         
         if method == 'median_fill':
-            logger.info(f"   基于 {depth_result['num_valid_points']} 个正常点的中值")
+            print(f"   基于 {depth_result['num_valid_points']} 个正常点的中值")
         
         # 5. 计算相机坐标
         camera_point = rs.rs2_deproject_pixel_to_point(
@@ -401,14 +398,14 @@ class ScreenTargetLocator:
             depth_meters
         )
         
-        logger.info(f"📷 相机坐标: X={camera_point[0]:.3f}, Y={camera_point[1]:.3f}, Z={camera_point[2]:.3f}")
-        logger.info(f"🤖 Torso坐标: X={torso_point[0]:.3f}, Y={torso_point[1]:.3f}, Z={torso_point[2]:.3f}")
+        print(f"📷 相机坐标: X={camera_point[0]:.3f}, Y={camera_point[1]:.3f}, Z={camera_point[2]:.3f}")
+        print(f"🤖 Torso坐标: X={torso_point[0]:.3f}, Y={torso_point[1]:.3f}, Z={torso_point[2]:.3f}")
         
         if self.measurement_error is not None:
             corrected = torso_point + self.measurement_error
-            logger.info(f"📏 修正后坐标: X={corrected[0]:.3f}, Y={corrected[1]:.3f}, Z={corrected[2]:.3f} (误差: {self.measurement_error})")
+            print(f"📏 修正后坐标: X={corrected[0]:.3f}, Y={corrected[1]:.3f}, Z={corrected[2]:.3f} (误差: {self.measurement_error})")
             
-        logger.info(f"📊 Torso Z偏差: {depth_result['torso_z_deviation']*100:.1f}cm")
+        print(f"📊 Torso Z偏差: {depth_result['torso_z_deviation']*100:.1f}cm")
         
         return {
             'target_index': target_index,
@@ -488,8 +485,8 @@ class ScreenTargetLocator:
     
     def run_interactive(self):
         """运行交互式定位模式"""
-        logger.info("\n🚀 启动屏幕目标定位器")
-        print("\n操作说明:") # 保持 print 以便用户在终端查看交互说明，或者也改为 logger.info
+        print("\n🚀 启动屏幕目标定位器")
+        print("\n操作说明:")
         print("  0-9 - 快速选择目标编号 (0-9)")
         print("  N - 输入自定义编号 (0-35)")
         print("  SPACE - 执行检测定位")
@@ -500,7 +497,7 @@ class ScreenTargetLocator:
         print("=" * 60)
         
         if not self.camera.start():
-            logger.error("❌ 摄像头启动失败")
+            print("❌ 摄像头启动失败")
             return
         
         # 🆕 初始化DepthHelper
@@ -541,58 +538,58 @@ class ScreenTargetLocator:
                     break
                 elif ord('0') <= key <= ord('9'):
                     self.current_target_index = key - ord('0')
-                    logger.info(f"\n🎯 选择目标编号: {self.current_target_index}")
+                    print(f"\n🎯 选择目标编号: {self.current_target_index}")
                 elif key == ord('n'):
                     try:
                         index = int(input("请输入目标编号 (0-35): "))
                         if 0 <= index <= 35:
                             self.current_target_index = index
-                            logger.info(f"🎯 选择目标编号: {self.current_target_index}")
+                            print(f"🎯 选择目标编号: {self.current_target_index}")
                         else:
-                            logger.error("❌ 编号超出范围")
+                            print("❌ 编号超出范围")
                     except ValueError:
-                        logger.error("❌ 输入无效")
+                        print("❌ 输入无效")
                 elif key == ord(' '):
-                    logger.info(f"\n🔍 开始检测目标区域 {self.current_target_index}...")
+                    print(f"\n🔍 开始检测目标区域 {self.current_target_index}...")
                     try:
                         self.last_detection_result = self.detect_and_locate(
                             color_image, depth_raw, self.current_target_index
                         )
                         self.last_torso_coords = self.last_detection_result['torso_coord']
-                        logger.info("✅ 检测成功")
+                        print("✅ 检测成功")
                     except TouchSystemError as e:
-                        logger.error(f"❌ 检测失败: {e}")
+                        print(f"❌ 检测失败: {e}")
                         self.last_detection_result = None
                         self.last_torso_coords = None
                 elif key == ord('s'):
                     if self.last_detection_result:
                         self._save_result(color_image, self.last_detection_result)
                     else:
-                        logger.warning("❌ 无可保存的结果")
+                        print("❌ 无可保存的结果")
                 # 🆕 新增快捷键
                 elif key == ord('+') or key == ord('='):
                     self.torso_z_tolerance += 0.01
                     self.depth_helper.torso_z_tolerance = self.torso_z_tolerance
-                    logger.info(f"📏 Z容差: ±{self.torso_z_tolerance*100:.0f}cm")
+                    print(f"📏 Z容差: ±{self.torso_z_tolerance*100:.0f}cm")
                 elif key == ord('-') or key == ord('_'):
                     self.torso_z_tolerance = max(0.01, self.torso_z_tolerance - 0.01)
                     self.depth_helper.torso_z_tolerance = self.torso_z_tolerance
-                    logger.info(f"📏 Z容差: ±{self.torso_z_tolerance*100:.0f}cm")
+                    print(f"📏 Z容差: ±{self.torso_z_tolerance*100:.0f}cm")
                 elif key == ord('['):
                     self.expected_torso_z -= 0.01
                     self.depth_helper.expected_torso_z = self.expected_torso_z
-                    logger.info(f"📏 Z基准: {self.expected_torso_z:.3f}m")
+                    print(f"📏 Z基准: {self.expected_torso_z:.3f}m")
                 elif key == ord(']'):
                     self.expected_torso_z += 0.01
                     self.depth_helper.expected_torso_z = self.expected_torso_z
-                    logger.info(f"📏 Z基准: {self.expected_torso_z:.3f}m")
+                    print(f"📏 Z基准: {self.expected_torso_z:.3f}m")
         
         except KeyboardInterrupt:
-            logger.warning("\n⚠️  用户中断")
+            print("\n⚠️  用户中断")
         finally:
             self.camera.stop()
             cv2.destroyAllWindows()
-            logger.info("[INFO] 程序已退出")
+            print("[INFO] 程序已退出")
     
     def _save_result(self, color_image: np.ndarray, result: Dict[str, Any]):
         """保存检测结果"""
@@ -612,9 +609,9 @@ class ScreenTargetLocator:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"\n💾 结果已保存:")
-        logger.info(f"   图像: {img_path}")
-        logger.info(f"   数据: {json_path}")
+        print(f"\n💾 结果已保存:")
+        print(f"   图像: {img_path}")
+        print(f"   数据: {json_path}")
 
 
 # ==========================================
@@ -666,7 +663,7 @@ def main():
     else:
         # 单次检测模式
         if not locator.camera.start():
-            logger.error("❌ 摄像头启动失败")
+            print("❌ 摄像头启动失败")
             return
         
         locator._init_depth_helper()

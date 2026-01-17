@@ -16,8 +16,12 @@ from typing import List, Dict, Any
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.robot_state_manager import robot_state
+from pathlib import Path
+# 添加项目根目录到路径 (为了导入 xiangyang 包)
+project_root = str(Path(__file__).resolve().parents[3])
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+from xiangyang.loco.common.robot_state_manager import robot_state
 
 
 class ArmHandSequence:

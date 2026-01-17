@@ -15,8 +15,13 @@ from typing import List
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from common.robot_state_manager import robot_state
+from pathlib import Path
+# 添加项目根目录到路径 (为了导入 xiangyang 包)
+project_root = str(Path(__file__).resolve().parents[3])
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from xiangyang.loco.common.robot_state_manager import robot_state
 
 
 class SimplePoseSequence:
@@ -159,9 +164,10 @@ def main():
     
     # 姿态序列（使用姿态名称）
     POSE_SEQUENCE = [
-        "phone_prepare_1",
-        "phone_prepare_2",
-        "phone_prepare_final"
+        "phone_pre_1",
+        "phone_pre_2",
+        "phone_pre_3",
+        "phone_pre_final"
     ]
     
     SPEED_FACTOR = 1.0               # 运动速度 (0.1-1.0)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-打招呼动作序列控制器 - 序列配置版
+PPT演示动作序列控制器
 功能：
-- 使用序列配置方式执行打招呼动作
-- 支持灵活编排手臂和灵巧手动作
-- 基于 _current_jpos_des 维护状态
+- 执行PPT指向动作
+- 等待用户确认
+- 恢复自然姿态
 """
 import sys
 import time
@@ -15,16 +15,17 @@ from typing import List, Dict, Any
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 
 import os
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from pathlib import Path
+
 # 添加项目根目录到路径 (为了导入 xiangyang 包)
 project_root = str(Path(__file__).resolve().parents[3])
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 from xiangyang.loco.common.robot_state_manager import robot_state
 
-
-class HelloGestureSequence:
-    """打招呼动作序列控制器"""
+class PPTGestureSequence:
+    """PPT演示动作序列控制器"""
     
     def __init__(self, arm: str = "right", hand: str = "right", interface: str = "eth0"):
         self.arm = arm
@@ -80,8 +81,6 @@ class HelloGestureSequence:
                 self.hand_poses = json.load(f)
             
             print(f"✅ 初始化成功")
-            print(f"   手臂姿态: {len(self.arm_poses)} 个")
-            print(f"   灵巧手姿态: {len(self.hand_poses)} 个")
             return True
             
         except Exception as e:
@@ -142,6 +141,18 @@ class HelloGestureSequence:
             print(f"  ⏸️  等待 {duration}s...")
             time.sleep(duration)
             return True
+        elif step_type == 'wait_input':
+            message = step.get('message', '按 Enter 继续...')
+            expected = step.get('expected', None)
+            
+            while True:
+                user_input = input(f"  ⌨️  {message} ").strip()
+                if expected is None:
+                    break
+                if user_input.lower() == expected.lower():
+                    break
+                print(f"  ⚠️  输入错误，请按 '{expected}' 继续")
+            return True
         else:
             print(f"  ⚠️  未知步骤类型: {step_type}")
             return False
@@ -151,18 +162,15 @@ class HelloGestureSequence:
         sequence: List[Dict[str, Any]], 
         speed_factor: float = 1.0
     ) -> bool:
-        """执行打招呼序列（不反向）"""
+        """执行序列"""
         print("\n" + "="*70)
-        print("👋 开始执行打招呼动作序列")
-        print("="*70)
-        print(f"📝 总步骤: {len(sequence)}")
-        print(f"⏱️  速度: {speed_factor}")
+        print("👋 开始执行PPT演示序列")
         print("="*70)
         
         try:
-            # 使用双锁（手臂+灵巧手）
-            with robot_state.safe_arm_control(arm=self.arm, source="hello_gesture", timeout=60.0):
-                with robot_state.safe_hand_control(hand=self.hand, source="hello_gesture", timeout=60.0):
+            # 使用双锁（手臂+灵巧手），增加超时时间以等待用户输入
+            with robot_state.safe_arm_control(arm=self.arm, source="ppt_gesture", timeout=300.0):
+                with robot_state.safe_hand_control(hand=self.hand, source="ppt_gesture", timeout=300.0):
                     
                     print(f"\n🔵 执行序列 ({len(sequence)} 步)")
                     print("-"*70)
@@ -173,11 +181,11 @@ class HelloGestureSequence:
                             print("❌ 序列执行中断")
                             return False
                         
-                        if i < len(sequence):
+                        if i < len(sequence) and step.get('type') != 'wait_input':
                             time.sleep(0.3)  # 步骤间延时
                     
                     print("-"*70)
-                    print("✅ 打招呼动作序列完成")
+                    print("✅ 序列执行完成")
                     print("="*70)
                     return True
         
@@ -205,46 +213,35 @@ class HelloGestureSequence:
 
 def main():
     """主程序"""
-    # ========== 🆕 在此配置打招呼序列 ==========
-    ARM = "right"                    # 手臂: "left" 或 "right"
-    HAND = "right"                   # 灵巧手: "left" 或 "right"
-    INTERFACE = "eth0"               # 网络接口
+    # ========== 🆕 配置 ==========
+    ARM = "left"
+    HAND = "left"
+    INTERFACE = "eth0"
     
-    # 打招呼动作序列
-    # type: 'arm' | 'hand' | 'wait'
-    # pose: 姿态名称（对应保存文件中的键）
-    # duration: 等待时间（仅 type='wait' 时有效）
-    HELLO_SEQUENCE = [
-        {'type': 'arm', 'pose': 'hello1'},       # 举手准备
-        {'type': 'hand', 'pose': 'hello'},      # 手掌张开
-        {'type': 'arm', 'pose': 'hello2'},       # 挥手向左
-        {'type': 'arm', 'pose': 'hello3'},       # 挥手向右
-        {'type': 'arm', 'pose': 'hello2'},       # 挥手向左
-        {'type': 'hand', 'pose': 'close'},      # 手掌恢复
-        # {'type': 'wait', 'duration': 0.3},
+    # PPT 演示动作序列
+    PPT_SEQUENCE = [
+        {'type': 'arm', 'pose': 'ppt_pose'},     # 指向屏幕
+        {'type': 'hand', 'pose': 'phone_pre_1'},       # 手势
+        {'type': 'wait_input', 'message': '输入 y 继续恢复: ', 'expected': 'y'},
+        {'type': 'hand', 'pose': 'close'},       # 手掌恢复
         {'type': 'arm', 'pose': 'nature'},       # 手臂放下
     ]
     
-    SPEED_FACTOR = 1.0               # 运动速度 (0.1-1.0)
-    # ==========================================
+    SPEED_FACTOR = 1.0
+    # ============================
     
     print("="*70)
-    print("👋 打招呼动作序列控制器")
-    print("="*70)
-    print(f"💪 手臂: {ARM.upper()}")
-    print(f"🖐️  手: {HAND.upper()}")
-    print(f"🌐 接口: {INTERFACE}")
+    print("👉 PPT演示动作序列控制器")
     print("="*70)
     
-    controller = HelloGestureSequence(arm=ARM, hand=HAND, interface=INTERFACE)
+    controller = PPTGestureSequence(arm=ARM, hand=HAND, interface=INTERFACE)
     
     try:
         if not controller.initialize():
             sys.exit(1)
         
-        # 执行打招呼序列
         success = controller.run_sequence(
-            sequence=HELLO_SEQUENCE,
+            sequence=PPT_SEQUENCE,
             speed_factor=SPEED_FACTOR
         )
         

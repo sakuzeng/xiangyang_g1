@@ -20,19 +20,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# 添加当前目录到路径
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# if current_dir not in sys.path:
-#     sys.path.append(current_dir)
 from pathlib import Path
 
-# 🆕 添加项目根目录到路径 (为了导入 xiangyang 包)
-# project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
+# 添加项目根目录到路径 (为了导入 xiangyang 包)
 project_root = str(Path(__file__).resolve().parents[3])
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# 导入依赖模块
 try:
     from xiangyang.loco.common.tts_client import TTSClient  # 🆕 使用公共模块
     from xiangyang.loco.common.asr_client import ASRClient

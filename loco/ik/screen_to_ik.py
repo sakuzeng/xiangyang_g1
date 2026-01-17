@@ -16,24 +16,23 @@ from typing import List, Optional, Tuple
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import os
-import sys
 
-from pathlib import Path
-project_root = str(Path(__file__).resolve().parents[3])
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-from xiangyang.loco.phone.screen_target_locator import ScreenTargetLocator
-from xiangyang.loco.phone.touch_exceptions import (
+# 🆕 导入升级版定位器
+from screen_target_locator import ScreenTargetLocator
+from touch_exceptions import (
     CameraError, 
     TargetNotFoundError, 
     DepthAcquisitionError, 
     IKSolutionError,
     SafetyLimitError
 )
-from xiangyang.loco.common.logger import setup_logger
-
-logger = setup_logger("screen_to_ik")
+from touch_exceptions import (
+    CameraError, 
+    TargetNotFoundError, 
+    DepthAcquisitionError, 
+    IKSolutionError,
+    SafetyLimitError
+)
 
 
 class ScreenToIKSolver:
@@ -64,7 +63,7 @@ class ScreenToIKSolver:
             urdf_file = str(Path(__file__).parent / urdf_file)
             
         if not os.path.exists(urdf_file):
-             logger.warning(f"⚠️ 警告: URDF文件未找到: {urdf_file}")
+             print(f"⚠️ 警告: URDF文件未找到: {urdf_file}")
 
         # 🆕 初始化升级版目标定位器
         self.locator = ScreenTargetLocator(
@@ -80,15 +79,15 @@ class ScreenToIKSolver:
         else:
              self.measurement_error = np.array(measurement_error)
         
-        logger.info(f"🔧 IK求解器配置:")
-        logger.info(f"   - Torso Z基准: {expected_torso_z:.3f}m")
-        logger.info(f"   - 测量误差修正: {self.measurement_error.tolist()}")
+        print(f"🔧 IK求解器配置:")
+        print(f"   - Torso Z基准: {expected_torso_z:.3f}m")
+        print(f"   - 测量误差修正: {self.measurement_error.tolist()}")
 
         
         # 构建运动学链
-        logger.info("🔧 正在构建运动学链条...")
+        print("🔧 正在构建运动学链条...")
         self.chain = self._build_chain_from_urdf(urdf_file, "torso_link", "left_hand_palm_link")
-        logger.info(f"   ✅ 链条构建成功,共 {len(self.chain.links)} 个环节")
+        print(f"   ✅ 链条构建成功,共 {len(self.chain.links)} 个环节")
         
         # 设置当前状态
         if current_joint_state is None:
@@ -108,7 +107,7 @@ class ScreenToIKSolver:
         current_frame = self.chain.forward_kinematics(self.current_state)
         self.constraint_orientation = current_frame[:3, :3]
         
-        logger.info(f"   ✅ 已锁定当前手掌姿态")
+        print(f"   ✅ 已锁定当前手掌姿态")
     
     def _build_chain_from_urdf(self, urdf_file, base_link, tip_link):
         """构建运动学链 (保持不变)"""
@@ -176,13 +175,13 @@ class ScreenToIKSolver:
         Returns:
             Tuple[List[float], np.ndarray]: (7维关节角度, Torso坐标)
         """
-        logger.info(f"\n{'='*60}")
-        logger.info(f"🎯 开始为目标区域 {target_index} 求解IK")
-        logger.info(f"{'='*60}")
+        print(f"\n{'='*60}")
+        print(f"🎯 开始为目标区域 {target_index} 求解IK")
+        print(f"{'='*60}")
         
         # 1. 启动摄像头
         if not self.locator.camera.start():
-            logger.error("❌ [IK] 摄像头启动失败")
+            print("❌ [IK] 摄像头启动失败")
             raise CameraError("摄像头启动失败")
         
         # 🆕 初始化DepthHelper (必须在相机启动后)
@@ -190,13 +189,13 @@ class ScreenToIKSolver:
         
         try:
             import time
-            logger.info("⏳ 等待摄像头稳定...")
+            print("⏳ 等待摄像头稳定...")
             time.sleep(2)
             
             color_image, depth_raw, _ = self.locator.camera.get_frames()
             
             if color_image is None or depth_raw is None:
-                logger.error("❌ [IK] 无法获取图像 (Color或Depth为空)")
+                print("❌ [IK] 无法获取图像 (Color或Depth为空)")
                 raise CameraError("无法获取图像 (Color或Depth为空)")
             
             # 2. 🆕 使用升级版检测 (内置Torso Z验证)
@@ -208,24 +207,24 @@ class ScreenToIKSolver:
             # 🆕 显示检测方法
             method = result.get('method', 'unknown')
             z_dev = result.get('torso_z_deviation', 0) * 100
-            logger.info(f"\n🔧 深度获取方法: {method}")
-            logger.info(f"📊 Torso Z偏差: {z_dev:.1f}cm")
+            print(f"\n🔧 深度获取方法: {method}")
+            print(f"📊 Torso Z偏差: {z_dev:.1f}cm")
             
             # 3. 应用误差修正 (可选)
             if apply_error_correction:
                 # 使用初始化时配置的误差向量
                 measurement_error = self.measurement_error
                 target_pos = target_pos_camera + measurement_error
-                logger.info(f"📏 已应用误差修正: {measurement_error}")
+                print(f"📏 已应用误差修正: {measurement_error}")
             else:
                 target_pos = target_pos_camera
             
-            logger.info(f"🎯 目标坐标 (Torso系): {target_pos}")
+            print(f"🎯 目标坐标 (Torso系): {target_pos}")
             
             # 4. 执行IK求解
-            logger.info(f"\n🔧 开始IK求解...")
-            logger.info(f"   - 目标位置: {target_pos}")
-            logger.info(f"   - 姿态约束: 保持当前手掌方向")
+            print(f"\n🔧 开始IK求解...")
+            print(f"   - 目标位置: {target_pos}")
+            print(f"   - 姿态约束: 保持当前手掌方向")
             
             ik_solution = self.chain.inverse_kinematics(
                 target_position=target_pos,
@@ -239,16 +238,16 @@ class ScreenToIKSolver:
             final_pos = final_frame[:3, 3]
             pos_error = np.linalg.norm(final_pos - target_pos)
             
-            logger.info(f"\n📊 求解验证:")
-            logger.info(f"   目标坐标: {target_pos}")
-            logger.info(f"   实际到达: {final_pos}")
-            logger.info(f"   位置误差: {pos_error*1000:.2f} mm")
+            print(f"\n📊 求解验证:")
+            print(f"   目标坐标: {target_pos}")
+            print(f"   实际到达: {final_pos}")
+            print(f"   位置误差: {pos_error*1000:.2f} mm")
             
             if pos_error > 0.05:
-                logger.error(f"❌ [IK] 位置误差过大: {pos_error:.3f}m > 0.05m")
+                print(f"❌ [IK] 位置误差过大: {pos_error:.3f}m > 0.05m")
                 raise IKSolutionError(f"位置误差过大 ({pos_error:.3f}m > 0.05m), 可能超出工作空间")
             else:
-                logger.info(f"   ✅ 位置误差在可接受范围内")
+                print(f"   ✅ 位置误差在可接受范围内")
             
             # 6. 提取7维关节角度
             joint_angles = [ik_solution[i] for i in range(1, len(ik_solution)-1)]
@@ -290,7 +289,7 @@ class ScreenToIKSolver:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"\n💾 结果已保存: {json_path}")
+        print(f"\n💾 结果已保存: {json_path}")
 
 
 def main():
@@ -328,9 +327,9 @@ def main():
             args.target_index,
             apply_error_correction=not args.no_correction
         )
-        logger.info("\n✅ 程序执行成功")
+        print("\n✅ 程序执行成功")
     except Exception as e:
-        logger.error(f"\n❌ 程序执行失败: {e}")
+        print(f"\n❌ 程序执行失败: {e}")
 
 
 if __name__ == "__main__":
