@@ -11,12 +11,7 @@ import sys
 import os
 from typing import Optional, Tuple
 
-# 添加路径以确保能导入依赖
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# if current_dir not in sys.path:
-#     sys.path.append(current_dir)
 from pathlib import Path
-# project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
 project_root = str(Path(__file__).resolve().parents[3])
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -53,9 +48,9 @@ def _get_system_params(interface: str = "eth0") -> dict:
         # 走跑模式
         if cur_id == 801 and cur_mode is not None and cur_mode != 2:
             return {
-                "expected_torso_z": -0.17,
-                "measurement_error": [0.005, -0.05, 0.25],
-                "wrist_pitch": -0.70,
+                "expected_torso_z": -0.165,
+                "measurement_error": [0.005, -0.055, 0.25],
+                "wrist_pitch": -0.65,
                 "torso_x_range": (0.25, 0.39),
                 "torso_y_range": (0.14, 0.38)
             }

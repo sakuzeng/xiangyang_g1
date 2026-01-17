@@ -24,7 +24,7 @@ graph TB
     subgraph external ["🌐 外部依赖服务"]
         direction LR
         TTS_Server["🔊 TTS HTTP 服务<br/><small>192.168.77.103:28001</small>"]
-        Wake_Server["🎙️ 唤醒控制服务<br/><small>内部接口</small>"]
+        Wake_Server["🎙️ 唤醒控制服务<br/><small>192.168.77.103:28004</small>"]
     end
     
     space1[ ]
@@ -40,7 +40,7 @@ graph TB
     subgraph control ["🤖 控制层"]
         direction TB
         Greeting["GreetingSkill<br/><small>上肢动作</small>"]
-        Loco["AdvancedLocomotion<br/><small>底盘运动</small>"]
+        Loco["AdvancedLocomotion<br/><small>运动控制</small>"]
         TTS_Client["TTSClient<br/><small>语音客户端</small>"]
     end
     
@@ -50,7 +50,7 @@ graph TB
         direction LR
         Arm_SDK["Arm SDK<br/><small>手臂控制</small>"]
         Hand_SDK["Hand SDK<br/><small>灵巧手</small>"]
-        Sport_SDK["Sport SDK<br/><small>底盘控制</small>"]
+        Sport_SDK["Move SDK<br/><small>移动控制</small>"]
         Odom["Odometry<br/><small>里程计</small>"]
     end
     
@@ -58,9 +58,9 @@ graph TB
     
     subgraph hardware ["⚙️ 硬件层"]
         direction LR
-        H1["左臂关节"]
-        H2["左手电机"]
-        H3["底盘轮组"]
+        H1["右臂关节"]
+        H2["右手电机"]
+        H3["运动控制"]
         H4["IMU传感器"]
     end
     
@@ -242,7 +242,7 @@ sequenceDiagram
 sequenceDiagram
     participant Main as 主程序
     participant Loco as AdvancedLocomotion
-    participant Sport as Sport SDK
+    participant Sport as Move SDK
     participant Odom as 里程计
     
     Note over Main,Odom: 🔄 步骤2: 左转 90°

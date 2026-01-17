@@ -26,7 +26,7 @@ def main():
     # === 配置 ===
     VOICE_TEXT = "尊敬的各位领导，大家好，我是监控机器人小安，欢迎莅临江南集控站指导工作。"
     INTERFACE = sys.argv[1] if len(sys.argv) > 1 else "eth0"
-    TTS_SOURCE = "greeting_demo"
+    TTS_SOURCE = "greeting"
     
     # === 初始化 ===
     print("🚀 启动迎宾演示程序...")

@@ -112,7 +112,7 @@ class GreetingSkill:
                         # 触发语音
                         if step_type == 'hand' and pose_name == 'hello':
                             time.sleep(0.3)
-                            TTSClient.speak(voice_text, volume=100, wait=False, source=tts_source)
+                            TTSClient.speak(voice_text, volume=50, wait=False, source=tts_source)
                         
                         time.sleep(0.3)
             print("✅ 打招呼完成")

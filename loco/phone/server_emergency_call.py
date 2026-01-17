@@ -1,3 +1,4 @@
+# TODO判断电话是否拨通（蓝色待机，黄色正在打，绿色已接通，红色已挂断）
 #!/usr/bin/env python3
 """
 emergency_call_service.py

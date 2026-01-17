@@ -540,7 +540,7 @@ def get_mode(val) -> Optional[int]:
 def main():
     """主程序"""
     # ========== 配置参数 ==========
-    TARGET_INDEX = 30
+    TARGET_INDEX = 31
     INTERFACE = "eth0"
     
     # 初始化SDK以获取状态
@@ -562,9 +562,9 @@ def main():
     if cur_id == 801 and cur_mode is not None and cur_mode != 2:
         logger.info("✅ 判定为: 走跑运控模式 (Run Mode)")
         # 走跑模式下的参数
-        EXPECTED_TORSO_Z = -0.17
-        MEASUREMENT_ERROR = [0.005, -0.05, 0.25]
-        WRIST_PITCH = -0.70
+        EXPECTED_TORSO_Z = -0.165
+        MEASUREMENT_ERROR = [0.005, -0.055, 0.25]
+        WRIST_PITCH = -0.65
         TORSO_X_RANGE = (0.25, 0.39)
         TORSO_Y_RANGE = (0.14, 0.38)
     else:
